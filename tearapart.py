@@ -3,6 +3,9 @@ import subprocess
 import os
 import sys
 
+MINUTE = 60
+HOUR = 60 * MINUTE
+
 
 def split_media_into_parts(input_file):
     output_dir = pathlib.Path(input_file).stem
@@ -23,13 +26,13 @@ def split_media_into_parts(input_file):
     duration = float(result.stdout.strip())
     print(f"Duration: {duration:.2f} seconds")
 
-    if duration > 120:
+    if duration > (2 * HOUR):
         CONST_PART = 10
         part_duration = duration / CONST_PART
-    elif duration > 60 and duration < 120:
+    elif duration > (HOUR) and duration < (2 * HOUR):
         CONST_PART = 5
         part_duration = duration / CONST_PART
-    elif duration > 30 and duration < 60:
+    elif duration > (0.5 * HOUR) and duration < (HOUR):
         CONST_PART = 3
         part_duration = duration / CONST_PART
     else:
