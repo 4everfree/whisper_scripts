@@ -35,8 +35,11 @@ def split_media_into_parts(input_file):
     elif duration > (0.5 * HOUR) and duration < (HOUR):
         CONST_PART = 3
         part_duration = duration / CONST_PART
-    else:
+    elif duration > (0.2 * HOUR) and duration < (0.5 * HOUR):
         CONST_PART = 2
+        part_duration = duration / CONST_PART
+    else:
+        CONST_PART = 1
         part_duration = duration / CONST_PART
 
     for i in range(CONST_PART):
