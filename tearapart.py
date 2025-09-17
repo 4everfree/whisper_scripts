@@ -3,7 +3,8 @@ import subprocess
 import os
 import sys
 
-def split_media_into_10_parts(input_file):
+
+def split_media_into_parts(input_file):
     output_dir = pathlib.Path(input_file).stem
     if not os.path.exists(input_file):
         raise FileNotFoundError(f"File '{input_file}' is not found")
@@ -35,7 +36,6 @@ def split_media_into_10_parts(input_file):
         CONST_PART = 2
         part_duration = duration / CONST_PART
 
-
     for i in range(CONST_PART):
         start_time = part_duration * i
         output_file = os.path.join(output_dir, f"part_{i + 1}.mp4")
@@ -54,10 +54,9 @@ def split_media_into_10_parts(input_file):
         print(f"Part {i + 1} saved as {output_file}")
 
 
-if __name__ == "__main__":
-    if sys.argv[1] is None:
-        for file in os.listdir("."):
-            if file.endswith("mp4"):
-                split_media_into_10_parts(file)
-    else:
-        split_media_into_10_parts(sys.argv[1])
+if len(sys.argv[1]) == 1:
+    for file in os.listdir("."):
+        if file.endswith("mp4"):
+            split_media_into_parts(file)
+else:
+    split_media_into_parts(sys.argv[1])
