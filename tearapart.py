@@ -54,7 +54,7 @@ def split_media_into_parts(input_file):
         print(f"Part {i + 1} saved as {output_file}")
 
 
-if len(sys.argv[1]) == 1:
+if len(sys.argv) == 1:
     for file in os.listdir("."):
         if file.endswith("mp4"):
             split_media_into_parts(file)
