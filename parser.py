@@ -1,7 +1,7 @@
 import re
 import os
+from pathlib import Path
 from dataclasses import dataclass
-
 
 TIMECODE_RE = re.compile(
     r"^\d{2}:\d{2}:\d{2},\d{3}\s+-->\s+\d{2}:\d{2}:\d{2},\d{3}$"
@@ -102,14 +102,11 @@ def main(name) -> None:
     cleaned = clean_srt_blocks(blocks)
     write_srt(output_path, cleaned)
 
-    print(f"Исходных блоков: {len(blocks)}")
-    print(f"После очистки: {len(cleaned)}")
-    print(f"Результат сохранён в: {output_path}")
+    print(f"Original blocks: {len(blocks)}")
+    print(f"Blocks after cleanup: {len(cleaned)}")
+    print(f"Saved result to: {output_path}")
 
 
 if __name__ == "__main__":
-    directory_path = "."
-    for filename in os.listdir(directory_path):
-        file, extension = os.path.splitext(filename)
-        if extension == ".srt":
-            main(file)
+    for filename in list(Path(".").glob("*.srt")):
+        main(filename.stem)
