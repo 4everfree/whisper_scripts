@@ -1,4 +1,5 @@
 import re
+import os
 from dataclasses import dataclass
 
 
@@ -93,8 +94,7 @@ def write_srt(path: str, blocks: list[SrtBlock]) -> None:
             file.write(f"{block.text}\n\n")
 
 
-def main() -> None:
-    name = "part_8"
+def main(name) -> None:
     input_path = f"{name}.srt"
     output_path = f"{name}_cleaned.srt"
 
@@ -108,4 +108,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    directory_path = "."
+    for filename in os.listdir(directory_path):
+        file, extension = os.path.splitext(filename)
+        if extension == ".srt":
+            main(file)
