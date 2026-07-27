@@ -45,6 +45,10 @@ process_file () {
             --flash-attn \
             --vad \
             -vm "$VAD_MODEL_PATH" \
+            --max-context 32 \                # Не дает модели помножить старый контекст и зациклиться
+ ┃          --no-speech-thold 0.6 \           # Отсекает галлюцинации на тишине и фоновом шуме
+ ┃          --logprob-thold -0.8 \            # Отбрасывает нерелевантные повторы
+ ┃          --entropy-thold 2.4 \             # Перезапускает декодер при зацикливании
             --output-srt \
             --output-file "${output_file%.srt}" \
             --language ru \
