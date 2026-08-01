@@ -34,6 +34,11 @@ process_file () {
     echo "[START] $input_file"
     echo "[OUT]   $output_file"
 
+    # Флаги качества:
+    #   --max-context 32      не даёт модели переиспользовать старый контекст и зацикливаться
+    #   --no-speech-thold 0.6 отсекает галлюцинации на тишине и фоновом шуме
+    #   --logprob-thold -0.8  отбрасывает нерелевантные повторы
+    #   --entropy-thold 2.4   перезапускает декодер при зацикливании
     {
         ffmpeg -nostdin -loglevel error -i "$input_file" \
             -ar 16000 \
@@ -45,10 +50,10 @@ process_file () {
             --flash-attn \
             --vad \
             -vm "$VAD_MODEL_PATH" \
-            --max-context 32 \                # Не дает модели помножить старый контекст и зациклиться
- ┃          --no-speech-thold 0.6 \           # Отсекает галлюцинации на тишине и фоновом шуме
- ┃          --logprob-thold -0.8 \            # Отбрасывает нерелевантные повторы
- ┃          --entropy-thold 2.4 \             # Перезапускает декодер при зацикливании
+            --max-context 32 \
+            --no-speech-thold 0.6 \
+            --logprob-thold -0.8 \
+            --entropy-thold 2.4 \
             --output-srt \
             --output-file "${output_file%.srt}" \
             --language ru \
