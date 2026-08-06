@@ -1,6 +1,5 @@
 import argparse
 import os
-import sys
 from pdf2image import convert_from_path
 from pypdf import PdfReader, PdfWriter
 
@@ -128,11 +127,16 @@ def parse_args():
         description="Извлечение страниц PDF: в PNG-картинки (рендер) или в PDF-файлы "
                      "по юнитам (без рендера, текстовый слой сохраняется)."
     )
-    parser.add_argument("pdf", help="Путь к исходному PDF-файлу")
-    parser.add_argument("output_folder", help="Папка для сохранения результата")
-    parser.add_argument("start", type=int, help="Страница, с которой начинать (нумерация с 1)")
+    parser.add_argument("--pdf", required=True, help="Путь к исходному PDF-файлу")
     parser.add_argument(
-        "end", type=int,
+        "--output", default=None,
+        help="Папка для сохранения результата. Если не указана — "
+             "создаётся папка рядом с PDF с таким же именем, как у файла "
+             "(без расширения)."
+    )
+    parser.add_argument("--start", type=int, required=True, help="Страница, с которой начинать (нумерация с 1)")
+    parser.add_argument(
+        "--end", type=int, required=True,
         help="Последняя страница. В режиме double — это страница ПОСЛЕДНЕГО ЮНИТА, "
              "а не упражнений (страница упражнений подхватится автоматически)."
     )
@@ -153,8 +157,13 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
+    if args.output is None:
+        pdf_dir = os.path.dirname(os.path.abspath(args.pdf))
+        pdf_stem = os.path.splitext(os.path.basename(args.pdf))[0]
+        args.output = os.path.join(pdf_dir, pdf_stem)
+        print(f"Папка не указана, используется: {args.output}")
     if args.format == "pdf":
-        extract_pages_to_pdf(args.pdf, args.output_folder, args.start, args.end, mode=args.mode)
+        extract_pages_to_pdf(args.pdf, args.output, args.start, args.end, mode=args.mode)
     else:
-        extract_pages_to_images(args.pdf, args.output_folder, args.start, args.end,
+        extract_pages_to_images(args.pdf, args.output, args.start, args.end,
                                  mode=args.mode, dpi=args.dpi)
