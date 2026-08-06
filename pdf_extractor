@@ -1,0 +1,160 @@
+import argparse
+import os
+import sys
+from pdf2image import convert_from_path
+from pypdf import PdfReader, PdfWriter
+
+
+def extract_pages_to_images(input_pdf, output_folder, start_page, finish_at,
+                             mode="single", dpi=200):
+    """
+    mode="single": берёт страницы через одну: start_page, start_page+2, ...
+                   до finish_at включительно. Одна картинка на юнит.
+    mode="double": берёт страницы парами (юнит + упражнения):
+                   (start_page, start_page+1), (start_page+2, start_page+3), ...
+                   finish_at здесь — номер страницы ЮНИТА (последней пары),
+                   страница упражнений после неё подхватывается автоматически.
+    """
+    if not os.path.exists(input_pdf):
+        print(f"Ошибка: Файл '{input_pdf}' не найден.")
+        return
+
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+        print(f"Создана папка для изображений: {output_folder}")
+
+    # В double-режиме реально нужна ещё и страница упражнений
+    # после последнего юнита (finish_at + 1).
+    last_page_to_load = finish_at + 1 if mode == "double" else finish_at
+
+    print("Загрузка и обработка PDF (это может занять время для больших файлов)...")
+    images = convert_from_path(
+        input_pdf,
+        first_page=start_page,
+        last_page=last_page_to_load,
+        dpi=dpi,
+    )
+
+    print("Начинаем сохранение кадров...")
+
+    num = 1
+    index = 0
+    while index < len(images):
+        real_page_num = start_page + index
+
+        if real_page_num > finish_at:
+            break
+
+        unit_image = images[index]
+        unit_name = f"unit_{num}"
+        unit_filename = f"{unit_name}_p{real_page_num}.png"
+        unit_image.save(os.path.join(output_folder, unit_filename), "PNG")
+        print(f"✓ Сохранена страница {real_page_num} -> {unit_filename}")
+
+        if mode == "double" and index + 1 < len(images):
+            ex_page_num = real_page_num + 1
+            ex_image = images[index + 1]
+            ex_filename = f"{unit_name}_{ex_page_num}_ex.png"
+            ex_image.save(os.path.join(output_folder, ex_filename), "PNG")
+            print(f"✓ Сохранена страница {ex_page_num} -> {ex_filename}")
+
+        num += 1
+        index += 2
+
+    print("\nГотово! Все выбранные страницы сохранены в виде картинок.")
+
+
+def extract_pages_to_pdf(input_pdf, output_folder, start_page, finish_at, mode="single"):
+    """
+    Вырезает страницы юнитов в отдельные PDF-файлы БЕЗ рендеринга —
+    просто копирует нужные страницы из исходного PDF, поэтому встроенный
+    текстовый слой остаётся нетронутым и точным (никакого распознавания
+    заново не требуется).
+
+    mode="single": один файл на юнит, одна страница (start_page, start_page+2, ...).
+    mode="double": один файл на юнит, но с двумя страницами (юнит + упражнения).
+                   finish_at — номер страницы ЮНИТА (последней пары), страница
+                   упражнений после неё подхватывается автоматически.
+    """
+    if not os.path.exists(input_pdf):
+        print(f"Ошибка: Файл '{input_pdf}' не найден.")
+        return
+
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+        print(f"Создана папка для PDF: {output_folder}")
+
+    reader = PdfReader(input_pdf)
+    total_pages = len(reader.pages)
+
+    print("Открываем PDF и вырезаем страницы юнитов (без рендеринга, текстовый слой сохраняется)...")
+
+    num = 1
+    real_page_num = start_page
+    while real_page_num <= finish_at:
+        if real_page_num > total_pages:
+            print(f"⚠ Страница {real_page_num} выходит за пределы документа ({total_pages} стр.), останавливаюсь.")
+            break
+
+        writer = PdfWriter()
+        writer.add_page(reader.pages[real_page_num - 1])
+        pages_included = [real_page_num]
+
+        if mode == "double":
+            ex_page_num = real_page_num + 1
+            if ex_page_num <= total_pages:
+                writer.add_page(reader.pages[ex_page_num - 1])
+                pages_included.append(ex_page_num)
+
+        if len(pages_included) == 2:
+            unit_filename = f"unit_{num}_p{pages_included[0]}-{pages_included[1]}.pdf"
+        else:
+            unit_filename = f"unit_{num}_p{pages_included[0]}.pdf"
+
+        output_path = os.path.join(output_folder, unit_filename)
+        with open(output_path, "wb") as f:
+            writer.write(f)
+
+        print(f"✓ Сохранён юнит {num} (стр. {'-'.join(map(str, pages_included))}) -> {unit_filename}")
+
+        num += 1
+        real_page_num += 2
+
+    print("\nГотово! Страницы юнитов вырезаны в PDF без потери текстового слоя.")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Извлечение страниц PDF: в PNG-картинки (рендер) или в PDF-файлы "
+                     "по юнитам (без рендера, текстовый слой сохраняется)."
+    )
+    parser.add_argument("pdf", help="Путь к исходному PDF-файлу")
+    parser.add_argument("output_folder", help="Папка для сохранения результата")
+    parser.add_argument("start", type=int, help="Страница, с которой начинать (нумерация с 1)")
+    parser.add_argument(
+        "end", type=int,
+        help="Последняя страница. В режиме double — это страница ПОСЛЕДНЕГО ЮНИТА, "
+             "а не упражнений (страница упражнений подхватится автоматически)."
+    )
+    parser.add_argument(
+        "--mode", choices=["single", "double"], default="single",
+        help="single: только страницы юнитов через одну (по умолчанию). "
+             "double: пары страниц юнит+упражнения."
+    )
+    parser.add_argument(
+        "--format", choices=["png", "pdf"], default="png",
+        help="png: рендер страниц в картинки (по умолчанию). "
+             "pdf: вырезать страницы юнитов как есть, в PDF — без рендера, "
+             "со встроенным текстовым слоем оригинала."
+    )
+    parser.add_argument("--dpi", type=int, default=300, help="Разрешение рендера для --format png (по умолчанию 300)")
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    if args.format == "pdf":
+        extract_pages_to_pdf(args.pdf, args.output_folder, args.start, args.end, mode=args.mode)
+    else:
+        extract_pages_to_images(args.pdf, args.output_folder, args.start, args.end,
+                                 mode=args.mode, dpi=args.dpi)
